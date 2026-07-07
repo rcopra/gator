@@ -15,7 +15,6 @@ func handlerAddFeed(s *state, cmd command) error {
 	}
 	ctx := context.Background()
 
-	// At the top of the handler, get the current user from the db
 	currentUser, err := s.db.GetUser(ctx, s.cfg.CurrentUserName)
 	if err != nil {
 		return err
@@ -38,12 +37,26 @@ func handlerAddFeed(s *state, cmd command) error {
 		return err
 	}
 
-	// If everything goes well, print out the fields of the new feed record
 	fmt.Println(feed.ID)
 	fmt.Println(feed.CreatedAt)
 	fmt.Println(feed.UpdatedAt)
 	fmt.Println(feed.Name)
 	fmt.Println(feed.Url)
 	fmt.Println(feed.UserID)
+	return nil
+}
+
+func handlerGetFeeds(s *state, cmd command) error {
+	ctx := context.Background()
+	feedSlice, err := s.db.GetFeeds(ctx)
+	if err != nil {
+		return err
+	}
+	for _, feed := range feedSlice {
+		fmt.Println(feed.Name)
+		fmt.Println(feed.Url)
+		fmt.Println(feed.UserName)
+	}
+
 	return nil
 }

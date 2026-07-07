@@ -58,3 +58,21 @@ func handlerRegister(s *state, cmd command) error {
 
 	return nil
 }
+
+func handlerGetUsers(s *state, cmd command) error {
+	ctx := context.Background()
+	userSlice, err := s.db.GetUsers(ctx)
+	if err != nil {
+		return err
+	}
+
+	for _, user := range userSlice {
+		if user.Name == s.cfg.CurrentUserName {
+			fmt.Println(user.Name + " (current)")
+		} else {
+			fmt.Println(user.Name)
+		}
+	}
+
+	return nil
+}
