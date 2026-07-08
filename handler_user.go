@@ -66,6 +66,10 @@ func handlerGetUsers(s *state, cmd command) error {
 		return err
 	}
 
+	if len(userSlice) == 0 {
+		fmt.Println("No users")
+	}
+
 	for _, user := range userSlice {
 		if user.Name == s.cfg.CurrentUserName {
 			fmt.Println(user.Name + " (current)")
