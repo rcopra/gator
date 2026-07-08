@@ -9,16 +9,11 @@ import (
 	"github.com/rcopra/gator/internal/database"
 )
 
-func handlerFollow(s *state, cmd command) error {
+func handlerFollow(s *state, cmd command, user database.User) error {
 	if len(cmd.Args) != 1 {
 		return fmt.Errorf("invalid input")
 	}
 	ctx := context.Background()
-
-	currentUser, err := s.db.GetUser(ctx, s.cfg.CurrentUserName)
-	if err != nil {
-		return err
-	}
 
 	url := cmd.Args[0]
 
@@ -31,7 +26,7 @@ func handlerFollow(s *state, cmd command) error {
 		ID:        uuid.New(),
 		CreatedAt: time.Now(),
 		UpdatedAt: time.Now(),
-		UserID:    currentUser.ID,
+		UserID:    user.ID,
 		FeedID:    selectedFeed.ID,
 	}
 
@@ -45,23 +40,45 @@ func handlerFollow(s *state, cmd command) error {
 	return nil
 }
 
-func handlerFollowing(s *state, cmd command) error {
+func handlerFollowing(s *state, cmd command, user database.User) error {
 	if len(cmd.Args) != 0 {
 		return fmt.Errorf("invalid input")
 	}
 	ctx := context.Background()
 
-	currentUser, err := s.db.GetUser(ctx, s.cfg.CurrentUserName)
-	if err != nil {
-		return err
-	}
-
-	userFeeds, err := s.db.GetFeedFollowsForUser(ctx, currentUser.ID)
+	userFeeds, err := s.db.GetFeedFollowsForUser(ctx, user.ID)
 	if err != nil {
 		return err
 	}
 	for _, userFeed := range userFeeds {
 		fmt.Println(userFeed.FeedName)
 	}
+	return nil
+}
+
+func handlerUnfollow(s *state, cmd command, user database.User) error {
+	if len(cmd.Args) != 1 {
+		return fmt.Errorf("invalid input")
+	}
+	ctx := context.Background()
+
+	url := cmd.Args[0]
+
+	selectedFeed, err := s.db.GetFeedByURL(ctx, url)
+	if err != nil {
+		return err
+	}
+
+	params := database.DeleteFeedFollowParams{
+		UserID: user.ID,
+		FeedID: selectedFeed.ID,
+	}
+
+	err = s.db.DeleteFeedFollow(ctx, params)
+	if err != nil {
+		return err
+	}
+
+	fmt.Printf("Successfully deleted %v", selectedFeed.Name)
 	return nil
 }
