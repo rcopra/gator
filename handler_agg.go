@@ -5,8 +5,10 @@ import (
 	"database/sql"
 	"fmt"
 	"github.com/google/uuid"
+	"log"
 	"time"
 
+	"github.com/lib/pq"
 	"github.com/rcopra/gator/internal/database"
 )
 
@@ -29,6 +31,15 @@ func scrapeFeeds(s *state) error {
 
 	fmt.Printf("Fetching feed: %s\n", markedFeed.Name)
 	for _, item := range fetchedFeed.Channel.Item {
+		publishedAt, err := time.Parse(time.RFC822, item.PubDate)
+		if err != nil {
+			publishedAt, err = time.Parse(time.RFC1123, item.PubDate)
+			if err != nil {
+				log.Println(err)
+				continue
+			}
+		}
+
 		params := database.CreatePostParams{
 			ID:        uuid.New(),
 			CreatedAt: time.Now(),
@@ -37,20 +48,24 @@ func scrapeFeeds(s *state) error {
 			Url:       item.Link,
 			Description: sql.NullString{
 				String: item.Description,
-				Valid:  true,
+				Valid:  err == nil,
 			},
 			PublishedAt: sql.NullTime{
-				Time:  item.PubDate,
-				Valid: true,
+				Time:  publishedAt,
+				Valid: err == nil,
 			},
 			FeedID: markedFeed.ID,
 		}
-
-		post, err := s.db.CreatePost(ctx, params)
-		if err != nil {
-			return err
+		_, err = s.db.CreatePost(ctx, params)
+		if pqErr, ok := err.(*pq.Error); ok {
+			// pqErr is now usable as *pq.Error, ok tells you whether the assertion succeeded
+			if pqErr.Code == "23505" {
+				continue
+			}
+			log.Println(pqErr)
+		} else if err != nil {
+			log.Println(err)
 		}
-		fmt.Printf("Successfully saved post: %s", post.Title)
 
 	}
 
